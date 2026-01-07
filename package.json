@@ -1,0 +1,35 @@
+{
+  "name": "extractor-extractos-bancarios",
+  "version": "1.0.0",
+  "description": "Aplicación web para extraer y clasificar transacciones de extractos bancarios PDF",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "postinstall": "echo 'Dependencies installed successfully'",
+    "heroku-postbuild": "echo 'Build completed'",
+    "hostinger-start": "node server.js"
+  },
+  "keywords": [
+    "pdf",
+    "bank",
+    "transactions",
+    "extractor"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

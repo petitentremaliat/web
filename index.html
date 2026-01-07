@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extractor de Extractos Bancarios</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <!-- Pantalla de Registro/Login -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-card">
+                <h1>💰 Extractor de Extractos Bancarios</h1>
+                
+                <!-- Tabs para cambiar entre Login y Registro -->
+                <div class="auth-tabs">
+                    <button id="loginTab" class="auth-tab active">Iniciar Sesión</button>
+                    <button id="registerTab" class="auth-tab">Registrarse</button>
+                </div>
+                
+                <!-- Formulario de Login -->
+                <div id="loginFormContainer" class="auth-form-container">
+                    <p class="login-subtitle">Inicia sesión con tu correo y contraseña</p>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label for="loginEmail">Correo Electrónico</label>
+                            <input type="email" id="loginEmail" class="form-input" placeholder="tu@email.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="loginPassword">Contraseña</label>
+                            <input type="password" id="loginPassword" class="form-input" placeholder="Ingresa tu contraseña" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-large">Iniciar Sesión</button>
+                    </form>
+                </div>
+                
+                <!-- Formulario de Registro -->
+                <div id="registerFormContainer" class="auth-form-container hidden">
+                    <p class="login-subtitle">Crea una nueva cuenta</p>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="registerEmail">Correo Electrónico</label>
+                            <input type="email" id="registerEmail" class="form-input" placeholder="tu@email.com" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="registerPassword">Contraseña</label>
+                            <input type="password" id="registerPassword" class="form-input" placeholder="Mínimo 6 caracteres" required minlength="6">
+                            <small class="form-hint">La contraseña debe tener al menos 6 caracteres</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="registerPasswordConfirm">Confirmar Contraseña</label>
+                            <input type="password" id="registerPasswordConfirm" class="form-input" placeholder="Confirma tu contraseña" required minlength="6">
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-large">Registrarse</button>
+                    </form>
+                </div>
+                
+                <div id="authError" class="error-message hidden"></div>
+                <div id="authSuccess" class="success-message hidden"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenido Principal (oculto hasta registro) -->
+    <div id="mainContent" class="main-content hidden">
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <h1>💰 Extractor de Extractos Bancarios</h1>
+                <div class="header-buttons">
+                    <button id="adminPanelBtn" class="btn btn-primary btn-small hidden">📊 Panel de Administración</button>
+                    <button id="logoutBtn" class="btn btn-secondary btn-small">Cerrar Sesión</button>
+                </div>
+            </div>
+            <p class="subtitle">Sube tu extracto bancario en PDF y extrae automáticamente las transacciones</p>
+            <div class="user-info">
+                <span>👤 Usuario: <span id="currentUserEmail"></span></span>
+                <span id="adminBadge" class="admin-badge hidden">👑 Administrador</span>
+            </div>
+        </header>
+
+        <!-- Panel de Administración -->
+        <div id="adminPanel" class="admin-panel hidden">
+            <div class="admin-panel-header">
+                <h2>👑 Panel de Administración</h2>
+                <button id="closeAdminPanelBtn" class="btn btn-secondary btn-small">Cerrar Panel</button>
+            </div>
+
+            <div class="admin-stats">
+                <div class="stat-card">
+                    <h3>📄 Total PDFs Procesados</h3>
+                    <p class="stat-number" id="adminTotalPdfs">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>👥 Total Usuarios</h3>
+                    <p class="stat-number" id="adminTotalUsers">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>💰 Total Transacciones</h3>
+                    <p class="stat-number" id="adminTotalTransactions">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>📊 Ingresos Totales</h3>
+                    <p class="stat-number income" id="adminTotalIncome">0,00 €</p>
+                </div>
+                <div class="stat-card">
+                    <h3>💸 Gastos Totales</h3>
+                    <p class="stat-number expense" id="adminTotalExpenses">0,00 €</p>
+                </div>
+            </div>
+
+            <div class="admin-filters">
+                <input type="text" id="adminSearchInput" class="form-input" placeholder="🔍 Buscar por usuario o nombre de archivo...">
+                <select id="adminUserFilter" class="form-input">
+                    <option value="">Todos los usuarios</option>
+                </select>
+            </div>
+
+            <div class="admin-table-container">
+                <table id="adminTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Usuario</th>
+                            <th>Nombre del PDF</th>
+                            <th>Transacciones</th>
+                            <th>Ingresos</th>
+                            <th>Gastos</th>
+                            <th>Balance Final</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="api-key-section card hidden">
+            <label for="openaiApiKey" class="api-key-label">🔑 API Key de OpenAI (opcional):</label>
+            <div class="api-key-input-group">
+                <input type="password" id="openaiApiKey" class="api-key-input" placeholder="sk-..." />
+                <button id="saveApiKeyBtn" class="btn btn-small btn-primary">Guardar</button>
+                <button id="clearApiKeyBtn" class="btn btn-small btn-secondary">Limpiar</button>
+            </div>
+            <small class="api-key-hint">La API key se guarda localmente en tu navegador. Solo se usa para clasificar transacciones.</small>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-box card" id="uploadBox">
+                <input type="file" id="pdfInput" accept=".pdf" hidden>
+                <label for="pdfInput" class="upload-label">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span class="upload-text">Haz clic para seleccionar un PDF</span>
+                    <span class="upload-hint">o arrastra y suelta el archivo aquí</span>
+                </label>
+            </div>
+            <div id="fileName" class="file-name"></div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Procesando PDF...</p>
+        </div>
+
+        <div id="results" class="results hidden">
+            <div class="results-header">
+                <h2>Transacciones Extraídas</h2>
+                <div class="stats">
+                    <span id="totalTransactions" class="stat-badge">0 transacciones</span>
+                    <span id="totalIncome" class="stat-badge income">Ingresos: 0,00 €</span>
+                    <span id="totalExpenses" class="stat-badge expense">Gastos: 0,00 €</span>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="transactionsTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Concepto</th>
+                            <th>Detalle</th>
+                            <th>Importe</th>
+                            <th>Tipo</th>
+                            <th>Categoría</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-section">
+                    <h3>📊 Distribución de Gastos por Categoría</h3>
+                    <div class="chart-container">
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>📈 Evolución de Gastos en el Tiempo</h3>
+                    <div class="chart-container">
+                        <canvas id="expensesTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>💰 Evolución del Saldo en el Tiempo</h3>
+                    <div class="chart-container">
+                        <canvas id="balanceTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <h3>🔀 Distribución de Gastos por Categoría (Diagrama Sankey)</h3>
+                    <div class="chart-container-sankey">
+                        <div id="sankeyChart"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="classifyWithAIBtn" class="btn btn-primary">🤖 Clasificar con IA</button>
+                <button id="exportExcelBtn" class="btn btn-secondary">📊 Exportar a Excel</button>
+                <button id="exportBtn" class="btn btn-secondary">📄 Exportar a CSV</button>
+                <button id="clearLearnedBtn" class="btn btn-secondary">Limpiar Aprendizaje</button>
+                <button id="clearBtn" class="btn btn-secondary">Limpiar</button>
+            </div>
+            <div id="aiStatus" class="ai-status hidden"></div>
+        </div>
+
+        <div id="error" class="error hidden"></div>
+        
+        <div id="debug" class="debug hidden">
+            <h3>Información de Depuración</h3>
+            <button id="toggleDebug" class="btn btn-secondary">Mostrar/Ocultar Texto Extraído</button>
+            <div id="debugContent" class="debug-content hidden">
+                <p><strong>Texto extraído del PDF (primeros 3000 caracteres):</strong></p>
+                <pre id="debugText"></pre>
+                <p><strong>Líneas encontradas:</strong> <span id="debugLines"></span></p>
+                <p><strong>Fechas encontradas:</strong> <span id="debugDates"></span></p>
+                <p><strong>Importes encontrados:</strong> <span id="debugAmounts"></span></p>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
