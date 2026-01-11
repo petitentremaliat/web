@@ -4,92 +4,45 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-// CREAR ARCHIVO DE LOG INMEDIATAMENTE (antes de cualquier otra cosa)
-// Intentar múltiples ubicaciones para asegurar que se cree
-let logStream;
-const logPaths = ['./runtime.log', './server.log', './app.log'];
-
-for (const logPath of logPaths) {
-    try {
-        logStream = fs.createWriteStream(logPath, { flags: 'w' });
-        logStream.write(`[START] ${new Date().toISOString()} === Iniciando aplicación ===\n`);
-        logStream.write(`[START] ${new Date().toISOString()} Directorio: ${__dirname}\n`);
-        logStream.write(`[START] ${new Date().toISOString()} Node version: ${process.version}\n`);
-        logStream.write(`[START] ${new Date().toISOString()} Puerto: ${process.env.PORT || 3000}\n`);
-        logStream.write(`[START] ${new Date().toISOString()} Host: ${process.env.HOST || '0.0.0.0'}\n`);
-        console.log(`✅ Log creado en: ${logPath}`);
-        break; // Si funcionó, usar este
-    } catch (logError) {
-        console.error(`Error creando log en ${logPath}:`, logError.message);
-        continue; // Intentar siguiente ubicación
-    }
-}
-
-// También crear un archivo de diagnóstico simple (más fácil de ver)
-try {
-    fs.writeFileSync('./server-status.txt', `Servidor iniciando: ${new Date().toISOString()}\nDirectorio: ${__dirname}\nNode: ${process.version}\n`);
-} catch (e) {
-    console.error('Error creando server-status.txt:', e.message);
-}
+// LOGGING SIMPLIFICADO - Sin archivos de log para reducir uso de memoria
+let logStream = null; // Desactivado para reducir memoria
+console.log('🚀 Iniciando servidor Node.js...');
+console.log(`📁 Directorio: ${__dirname}`);
+console.log(`🟢 Node version: ${process.version}`);
+console.log(`📡 Puerto: ${process.env.PORT || 3000}`);
 
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 
+// Función writeLog simplificada - solo consola, sin archivos
 function writeLog(level, message) {
-    try {
-        const timestamp = new Date().toISOString();
-        const logMessage = `[${level}] ${timestamp} ${message}\n`;
-        if (logStream) {
-            logStream.write(logMessage);
-        }
-        // También mostrar en consola si está disponible
-        if (level === 'ERROR' || level === 'UNCAUGHT' || level === 'UNHANDLED') {
-            console.error(logMessage);
-        } else {
-            console.log(logMessage);
-        }
-    } catch (e) {
-        // Si falla escribir en log, al menos mostrar en consola
-        console.error('Error escribiendo en log:', e);
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${level}] ${timestamp} ${message}`;
+    if (level === 'ERROR' || level === 'UNCAUGHT' || level === 'UNHANDLED') {
+        console.error(logMessage);
+    } else {
+        console.log(logMessage);
     }
 }
 
-// Capturar errores no manejados ANTES de que se inicie la app
+// Capturar errores no manejados
 process.on('uncaughtException', (err) => {
-    try {
-        writeLog('UNCAUGHT', `Excepción no capturada: ${err.message}\n${err.stack}`);
-    } catch (e) {
-        console.error('Error fatal:', err);
-    }
-    if (logStream) {
-        logStream.end();
-    }
+    console.error('❌ Error fatal no capturado:', err.message);
+    console.error(err.stack);
     process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    try {
-        writeLog('UNHANDLED', `Promesa rechazada no manejada: ${reason}\n${reason?.stack || ''}`);
-    } catch (e) {
-        console.error('Promesa rechazada:', reason);
-    }
+    console.error('⚠️ Promesa rechazada no manejada:', reason);
 });
 
-// Redirigir console.log y console.error a archivo también
-const originalLog = console.log;
-const originalError = console.error;
-
-console.log = (...args) => {
-    writeLog('LOG', args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-    originalLog(...args);
-};
-
-console.error = (...args) => {
-    writeLog('ERROR', args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '));
-    originalError(...args);
-};
+// LOGGING SIMPLIFICADO para reducir uso de memoria en Render
+// Desactivado redirección de console.log a archivos (consumía demasiada memoria)
+// const originalLog = console.log;
+// const originalError = console.error;
+// console.log y console.error se usan directamente sin redirección
 
 writeLog('INFO', '=== Iniciando servidor ===');
 writeLog('INFO', `Directorio de trabajo: ${__dirname}`);
